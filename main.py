@@ -5,6 +5,12 @@ from tqdm import tqdm
 import random
 import itertools
 
+# From Python cookboook
+def grouper(n, iterable, fillvalue=None):
+    "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
+    args = [iter(iterable)] * n
+    return itertools.zip_longest(*args, fillvalue=fillvalue)
+
 class photo:
     def __init__(self, tags, orientation):
         self.tags = set(tags)
@@ -26,14 +32,19 @@ class slideshow:
         for photo in photos:
             self.add_photo(photo)
     
-    def add_photo(self, photo):
+    def add_photo(self, _photo):
         assert(photo not in self.photos)
 
-        prev_slide = self.photos[-1]    
-        next_slide = photo
+        if len(self.photos) == 0:
+            prev_slide = photo([], None)
+        else:
+            prev_slide = self.photos[-1]    
+        
+        next_slide = _photo
 
         self.score += transition_score(prev_slide, next_slide)
-        self.photos.append(photo)
+        
+        self.photos.append(_photo)
 
 
 def merge_vertical_photos(photos):
@@ -41,7 +52,7 @@ def merge_vertical_photos(photos):
 
 def generate_similarity_matrix(photos):
 
-    similarity = np.zeros((len(photos), len(photos)))
+    similarity = np.zeros((len(photos), len(photos)), dtype='uint8')
 
     for i, photo_i in tqdm(enumerate([p for p in photos if p.orientation == "H"])):
         for j, photo_j in tqdm(enumerate([p for p in photos if p.orientation == "H"])):
@@ -67,20 +78,17 @@ def parse_input(input_filename):
 
 def optimal_subsets(photos, n=10):
 
-    subsets = photos[::n]
     slideshows = []
 
-    for subset in subsets:
+    for subset in grouper(10, photos):
         best_score = 0
 
-        for combo in itertools.combinations(subset):
+        for combo in itertools.combinations(subset, 10):
             s = slideshow()
             s.add_photos(combo)
 
-            score = s.score_slideshow()
-
-            if score >= best_score:
-                best_score = score
+            if s.score >= best_score:
+                best_score = s.score
                 best_s = s
 
         slideshows.append(best_s)
@@ -93,7 +101,9 @@ if __name__ == "__main__":
     random.seed(42)
     random.shuffle(photos)
 
+    photo_subset = photos[:100]
     similarity = generate_similarity_matrix(photo_subset)
+    optimal_subsets(photo_subset)
 
     plt.imshow(similarity)
     plt.colorbar()

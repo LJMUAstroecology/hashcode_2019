@@ -30,7 +30,7 @@ class slide:
         self.photos = photos
 
         for p in self.photos:
-            self.tags.add(p.tags)
+            self.tags.update(p.tags)
 
     def transition_score(self, next_slide):
         return transition_score(self.tags, next_slide.tags)
@@ -137,12 +137,12 @@ def get_horizontal_slides(photos):
     return [slide(p) for p in photos if p.orientation == "H"]
 
 def get_vertical_slides(photos):
-    
-    verticals =  [p for p in photos if p.orientation == "H"]
+
+    verticals =  [p for p in photos if p.orientation == "V"]
 
     slides = []
     for i, _ in enumerate(verticals[::2]):
-        slides.append(slide([verticals[i], verticals[i+1]))
+        slides.append(slide([verticals[i], verticals[i+1]]))
 
     return slides
 
@@ -154,6 +154,8 @@ if __name__ == "__main__":
 
     photos = photos
     slides = get_horizontal_slides(photos) + get_vertical_slides(photos)
+
+    print(get_vertical_slides(photos))
 
     slideshows = optimal_subsets(slides, 6)
 

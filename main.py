@@ -12,7 +12,7 @@ def grouper(n, iterable, fillvalue=None):
     return itertools.zip_longest(*args, fillvalue=fillvalue)
 
 def transition_score(tags_a, tags_b):
-    score_1 = len(tags_a.union(tags_b))
+    score_1 = len(tags_a.intersection(tags_b))
     score_2 = len(tags_a.difference(tags_b))
     score_3 = len(tags_b.difference(tags_a))
 
@@ -133,11 +133,14 @@ def merge_slideshows(slideshows):
 
     return master_show
 
+def get_vertical_images():
+    pass
+
 if __name__ == "__main__":
     photos = parse_input(sys.argv[1])
 
-    random.seed(42)
-    random.shuffle(photos)
+    #random.seed(42)
+    #random.shuffle(photos)
 
     photos = photos
     slides = [slide([photo]) for photo in photos]

@@ -4,6 +4,8 @@ import sys
 from tqdm import tqdm
 import random
 import itertools
+import os
+import time
 
 from photo import Photo, transition_score
 from slide import Slide
@@ -32,7 +34,7 @@ def parse_input(input_filename):
     photos = []
 
     for i, meta in enumerate(data[1:]):
-        meta = meta.split(" ")
+        meta = meta.strip().split(" ")
 
         orientation = meta[0]
         tags = meta[2:]
@@ -86,7 +88,7 @@ def find_greedy_match_slide(slide, slides):
     """
 
     if len(slides) == 1:
-        return slides[0]
+        return 0
 
     best_score = 0
     best_match = None
@@ -147,11 +149,11 @@ def greedy_slideshow(photos, rand_seed=42):
     random.seed(rand_seed)
     random.shuffle(slides)
 
-    show = Slideshow([slides[-1]])
-    slides.pop()
+    print("{} slides".format(len(slides)))
+
+    show = Slideshow([slides.pop()])
 
     n_slides = len(slides)
-    print("{} slides".format(n_slides))
     pbar = tqdm(total=n_slides)
 
     # This runs for 2N/2 iterations. The greedy slide-finder takes N
@@ -161,10 +163,10 @@ def greedy_slideshow(photos, rand_seed=42):
         best_slide = find_greedy_match_slide(show.slides[-1], slides)
 
         if best_slide is None:
-            continue
-
-        show.add_slide(slides.pop(best_slide))
-
+            idx = random.randint(0, len(slides)-1)
+            show.add_slide(slides.pop(idx))
+        else:
+            show.add_slide(slides.pop(best_slide))
         pbar.set_postfix(score=show.score, n_slides=len(show.slides))
 
     return show
@@ -184,8 +186,8 @@ if __name__ == "__main__":
     #ref_slideshow = Slideshow(slides)
     #print("Reference (random) slideshow score: ", ref_slideshow.score)
 
-    show = greedy_slideshow(photos)
+    show = greedy_slideshow(photos, rand_seed=time.time())
 
     print("Slideshow score: ", show.score)
 
-    show.save("test_greedy_{}.txt".format(input_file.split('.')[0]))
+    show.save("test_greedy_{}.txt".format(os.path.splitext(os.path.basename(input_file))[0]))

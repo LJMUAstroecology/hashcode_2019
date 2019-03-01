@@ -127,18 +127,18 @@ def find_greedy_match_vertical(photo, photos):
 def get_horizontal_slides(photos):
     return [Slide([p]) for p in photos if p.orientation == "H"]
 
-def get_vertical_slides(photos, strategy="naive"):
+def get_vertical_slides(photos, strategy="naive", rand_seed=time.time()):
+
+    random.seed(rand_seed)
+    random.shuffle(photos)
 
     slides = []
     verticals =  [p for p in photos if p.orientation == "V"]
 
     if strategy == "naive":
-        print("Naive verticals")
         for i in range(0, len(verticals), 2):
-            print(i, i+1)
             slides.append(Slide( [verticals[i], verticals[i+1]] ))
     elif strategy == "greedy":
-        print("Greedy verticals")
         for _ in verticals:
             v = verticals.pop()
             best_match = find_greedy_match_vertical(v, verticals)
@@ -155,15 +155,11 @@ def greedy_slideshow(photos, rand_seed=42, strategy="naive"):
     random.seed(rand_seed)
     random.shuffle(slides)
 
-    print("{} slides".format(len(slides)))
-
     show = Slideshow([slides.pop()])
 
     n_slides = len(slides)
-    pbar = tqdm(total=n_slides)
 
     # This runs for N^2 iterations...
-
     pbar = tqdm(range(n_slides))
     for _ in pbar:
         best_slide = find_greedy_match_slide(show.slides[-1], slides)
@@ -188,8 +184,9 @@ if __name__ == "__main__":
     #ref_slideshow = Slideshow(slides)
     #print("Reference (random) slideshow score: ", ref_slideshow.score)
 
-    show = greedy_slideshow(photos, rand_seed=time.time(), strategy=argv[2])
+    show = greedy_slideshow(photos, rand_seed=time.time(), strategy=sys.argv[2])
 
     print("Slideshow score: ", show.score)
 
-    show.save("test_greedy_{}.txt".format(os.path.splitext(os.path.basename(input_file))[0]))
+    os.makedirs("./results", exist_ok=True)
+    show.save("./results/{}_{}_{}.txt".format(os.path.splitext(os.path.basename(input_file))[0], show.score, time.time()))

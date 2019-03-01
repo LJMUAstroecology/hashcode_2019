@@ -161,27 +161,26 @@ def greedy_slideshow(photos, rand_seed=42):
     vertical_photos = [p for p in photos if p.orientation == "V"]
     horizontal_photos = [p for p in photos if p.orientation == "H"]
 
-    n_h =  len(horizontal_photos)
+    n_h = len(horizontal_photos)
     n_v = len(vertical_photos)
 
     if n_h == 0:
-        photos = vertical_photos
-        show = Slideshow([ Slide([photos.pop(), photos.pop()]) ])
+        show = Slideshow([ Slide([vertical_photos.pop(), vertical_photos.pop()]) ])
     elif n_v == 0:
         # Don't care, just take any
-        photos = horizontal_photos
-        show = Slideshow([ Slide([photos.pop()]) ])
+        show = Slideshow([ Slide([horizontal_photos.pop()]) ])
     else:
         #Take a horizontal photo, the remaining order doesn't matter
-        photos = vertical_photos + horizontal_photos
-        show = Slideshow([ Slide([photos.pop(-1)]) ])
+        show = Slideshow([ Slide([horizontal_photos.pop(-1)]) ])
            
+    photos = horizontal_photos + vertical_photos
     n_photos = len(photos)
 
     # This runs for N^2 iterations...
     pbar = tqdm(range(n_photos))
     for _ in pbar:
 
+        photos = horizontal_photos + vertical_photos
         if len(photos) == 0:
             break
 
@@ -191,8 +190,8 @@ def greedy_slideshow(photos, rand_seed=42):
 
         if best_photo.orientation == "V":
             # If we have a horizontal photo, then we're done
-            # otherwise find the best vertical photo
-            best_idx = find_greedy_match_photo(show.slides[-1], [p for p in photos if p.orientation == "V"])
+            # otherwise find the next best vertical photo
+            best_idx = find_greedy_match_photo(show.slides[-1], vertical_photos)
             best_photo = photos.pop(best_idx)
             show.slides[-1].photos.append(best_photo)
 

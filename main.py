@@ -102,11 +102,9 @@ def find_greedy_match_slide(slide, slides):
     
     return best_match
 
-def find_greedy_match_vertical(photo, photos):
+def find_greedy_match_photo(slide, photos):
     """
-    Simple strategy for finding the best matching vertical photo.
-
-    Finds combinations of vertical photos with high tag differences.
+    Find the best photo
     """
 
     if len(photos) == 1:
@@ -114,9 +112,14 @@ def find_greedy_match_vertical(photo, photos):
 
     best_score = 0
     best_match = random.randint(0, len(photos)-1)
+    
+    comparison_slide = Slide([])
 
     for i, p in enumerate(photos):
-        score = len(photo.tags.union(p.tags))
+        comparison_slide.photos = [p]
+        comparison_slide.tags = p.tags
+
+        score = slide.score(comparison_slide)
 
         if score > best_score:
             best_score = score
@@ -146,24 +149,54 @@ def get_vertical_slides(photos, strategy="naive", rand_seed=time.time()):
             
     return slides
 
-def get_slides(photos, strategy="naive"):
+def get_slides(photos):
     return get_horizontal_slides(photos) + get_vertical_slides(photos, strategy)
 
-def greedy_slideshow(photos, rand_seed=42, strategy="naive"):
-    slides = get_slides(photos, strategy)
+def greedy_slideshow(photos, rand_seed=42):
 
     random.seed(rand_seed)
-    random.shuffle(slides)
+    random.shuffle(photos)
 
-    show = Slideshow([slides.pop()])
+    # Set up slideshow
+    vertical_photos = [p for p in photos if p.orientation == "V"]
+    horizontal_photos = [p for p in photos if p.orientation == "H"]
 
-    n_slides = len(slides)
+    n_h =  len(horizontal_photos)
+    n_v = len(vertical_photos)
+
+    if n_h == 0:
+        photos = vertical_photos
+        show = Slideshow([ Slide([photos.pop(), photos.pop()]) ])
+    elif n_v == 0:
+        # Don't care, just take any
+        photos = horizontal_photos
+        show = Slideshow([ Slide([photos.pop()]) ])
+    else:
+        #Take a horizontal photo, the remaining order doesn't matter
+        photos = vertical_photos + horizontal_photos
+        show = Slideshow([ Slide([photos.pop(-1)]) ])
+           
+    n_photos = len(photos)
 
     # This runs for N^2 iterations...
-    pbar = tqdm(range(n_slides))
+    pbar = tqdm(range(n_photos))
     for _ in pbar:
-        best_slide = find_greedy_match_slide(show.slides[-1], slides)
-        show.add_slide(slides.pop(best_slide))
+
+        if len(photos) == 0:
+            break
+
+        best_idx = find_greedy_match_photo(show.slides[-1], photos)
+        best_photo = photos.pop(best_idx)
+        show.add_slide(Slide([best_photo]))
+
+        if best_photo.orientation == "H":
+            # If we have a horizontal photo, then we're done
+            continue
+        else:
+            # Find the best vertical photo
+            best_idx = find_greedy_match_photo(show.slides[-1], [p for p in photos if p.orientation == "V"])
+            best_photo = photos.pop(best_idx)
+            show.slides[-1].photos.append(best_photo)
 
         pbar.set_postfix(score=show.score, n_slides=len(show.slides))
 
@@ -184,7 +217,7 @@ if __name__ == "__main__":
     #ref_slideshow = Slideshow(slides)
     #print("Reference (random) slideshow score: ", ref_slideshow.score)
 
-    show = greedy_slideshow(photos, rand_seed=time.time(), strategy=sys.argv[2])
+    show = greedy_slideshow(photos, rand_seed=time.time())
 
     print("Slideshow score: ", show.score)
 

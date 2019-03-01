@@ -110,45 +110,47 @@ def find_greedy_match_vertical(photo, photos):
     """
 
     if len(photos) == 1:
-        return photos[0]
+        return 0
 
     best_score = 0
     best_match = random.randint(0, len(photos)-1)
 
-    for i,p in enumerate(photos):
-        score = len(photo.tags.difference(p))
+    for i, p in enumerate(photos):
+        score = len(photo.tags.union(p.tags))
 
         if score > best_score:
             best_score = score
             best_match = i
 
-    return i
+    return best_match
 
 def get_horizontal_slides(photos):
     return [Slide([p]) for p in photos if p.orientation == "H"]
 
 def get_vertical_slides(photos, strategy="naive"):
 
+    slides = []
     verticals =  [p for p in photos if p.orientation == "V"]
 
     if strategy == "naive":
-        slides = []
-        for i, _ in enumerate(verticals[::2]):
+        print("Naive verticals")
+        for i in range(0, len(verticals), 2):
+            print(i, i+1)
             slides.append(Slide( [verticals[i], verticals[i+1]] ))
     elif strategy == "greedy":
-
-        for i, _ in enumerate(verticals):
+        print("Greedy verticals")
+        for _ in verticals:
             v = verticals.pop()
             best_match = find_greedy_match_vertical(v, verticals)
-            slides.append([v, verticals.pop(best_match)])
-
+            slides.append(Slide( [v, verticals.pop(best_match)]))
+            
     return slides
 
 def get_slides(photos, strategy="naive"):
-    return get_horizontal_slides(photos) + get_vertical_slides(photos)
+    return get_horizontal_slides(photos) + get_vertical_slides(photos, strategy)
 
 def greedy_slideshow(photos, rand_seed=42, strategy="naive"):
-    slides = get_slides(photos)
+    slides = get_slides(photos, strategy)
 
     random.seed(rand_seed)
     random.shuffle(slides)
@@ -186,7 +188,7 @@ if __name__ == "__main__":
     #ref_slideshow = Slideshow(slides)
     #print("Reference (random) slideshow score: ", ref_slideshow.score)
 
-    show = greedy_slideshow(photos, rand_seed=time.time(), strategy="greedy")
+    show = greedy_slideshow(photos, rand_seed=time.time(), strategy="naive")
 
     print("Slideshow score: ", show.score)
 

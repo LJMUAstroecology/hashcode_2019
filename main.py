@@ -5,72 +5,15 @@ from tqdm import tqdm
 import random
 import itertools
 
+from photo import Photo, transition_score
+from slide import Slide
+from slideshow import Slideshow
+
 # From Python cookboook
 def grouper(n, iterable, fillvalue=None):
     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * n
     return itertools.zip_longest(*args, fillvalue=fillvalue)
-
-def transition_score(tags_a, tags_b):
-    score_1 = len(tags_a.intersection(tags_b))
-    score_2 = len(tags_a.difference(tags_b))
-    score_3 = len(tags_b.difference(tags_a))
-
-    return min(score_1, score_2, score_3)
-
-class photo:
-    def __init__(self, id, tags, orientation = "H"):
-        self.tags = set(tags)
-        self.index = id
-        self.orientation = orientation
-
-class slide:
-    def __init__(self, photos):
-        self.tags = set()
-        self.photos = photos
-
-        for p in self.photos:
-            self.tags.update(p.tags)
-
-    def transition_score(self, next_slide):
-        return transition_score(self.tags, next_slide.tags)
-
-class slideshow:
-    def __init__(self, slides = None):
-        self.slides = []
-        self.score = 0
-
-        if slides is not None:
-            self.add_slides(slides)
-    
-    def add_slides(self, slides):
-        for s in slides:
-            self.add_slide(s)
-    
-    def add_slide(self, next_slide):
-
-        if len(next_slide.photos) == 0:
-            return
-
-        if len(self.slides) == 0:
-            prev_slide = slide([])
-        else:
-            prev_slide = self.slides[-1]
-        
-        self.score += prev_slide.transition_score(next_slide)
-        self.slides.append(next_slide)
-
-    def save(self, filename):
-
-        with open(filename, "w") as of:
-            of.write("{}\n".format(len(self.slides)))
-            for slide in self.slides:
-                ids = []
-                for photo in slide.photos:
-                    ids.append(photo.index)
-                
-                of.write(" ".join([str(id) for id in ids]))
-                of.write("\n")
 
 def generate_similarity_matrix(photos):
 
@@ -94,7 +37,7 @@ def parse_input(input_filename):
         orientation = meta[0]
         tags = meta[2:]
 
-        photos.append(photo(i, tags, orientation))
+        photos.append(Photo(i, tags, orientation))
 
     return photos
 
@@ -102,12 +45,12 @@ def optimal_subsets(slides, n=5):
 
     slideshows = []
 
-    for subset in tqdm(grouper(n, slides, slide([]))):
+    for subset in tqdm(grouper(n, slides, Slide([]))):
 
         best_score = 0
 
         for permutation in itertools.permutations(subset, n):
-            s = slideshow()
+            s = Slideshow()
 
             s.add_slides(permutation)
 
@@ -126,45 +69,123 @@ def plot_similarity_matrix(similarity):
 
 def merge_slideshows(slideshows):
 
-    master_show = slideshow()
+    merged_slideshow = Slideshow()
 
-    for s in slideshows:
-        master_show.add_slides(s.slides)
+    for slideshow in slideshows:
+        merged_slideshow.add_slides(slideshow.slides)
 
-    return master_show
+    return merged_slideshow
+
+def find_greedy_match_slide(slide, slides):
+    """
+    Simple strategy for finding the best match for a given (horizontal!) photo.
+
+    Complexity is O(N) where N = len(photos)
+
+    Returns the *index* of the best match
+    """
+
+    if len(slides) == 1:
+        return slides[0]
+
+    best_score = 0
+    best_match = None
+
+    for i, s in enumerate(slides):
+        score = slide.score(s)
+        
+        if score > best_score:
+            best_score = score
+            best_match = i
+    
+    return best_match
+
+def find_greedy_match_vertical(photo, photos):
+    """
+    Simple strategy for finding the best matching vertical photo.
+
+    Finds combinations of vertical photos with high tag differences.
+    """
+
+    if len(photos) == 1:
+        return photos[0]
+
+    best_score = 0
+    best_match = None
+
+    for p in photos:
+        score = len(photo.tags.difference(p))
+
+        if score > best_score:
+            best_score = score
+            best_match = p
+    
+    return best_match
 
 def get_horizontal_slides(photos):
-    return [slide(p) for p in photos if p.orientation == "H"]
+    return [Slide([p]) for p in photos if p.orientation == "H"]
 
-def get_vertical_slides(photos):
+def get_vertical_slides(photos, strategy="naive"):
 
     verticals =  [p for p in photos if p.orientation == "V"]
 
-    slides = []
-    for i, _ in enumerate(verticals[::2]):
-        slides.append(slide([verticals[i], verticals[i+1]]))
+    if strategy == "naive":
+        slides = []
+        for i, _ in enumerate(verticals[::2]):
+            slides.append(Slide( [verticals[i], verticals[i+1]] ))
+    elif strategy == "greedy":
+        pass
 
     return slides
 
-if __name__ == "__main__":
-    photos = parse_input(sys.argv[1])
+def get_slides_naive(photos):
+    return get_horizontal_slides(photos) + get_vertical_slides(photos)
 
-    #random.seed(42)
-    #random.shuffle(photos)
+def greedy_slideshow(photos, rand_seed=42):
+    slides = get_slides_naive(photos)
 
-    photos = photos
+    random.seed(rand_seed)
+    random.shuffle(slides)
+
+    show = Slideshow([slides[-1]])
+    slides.pop()
+
+    n_slides = len(slides)
+    print("{} slides".format(n_slides))
+    pbar = tqdm(total=n_slides)
+
+    # This runs for 2N/2 iterations. The greedy slide-finder takes N
+
+    pbar = tqdm(range(n_slides))
+    for _ in pbar:
+        best_slide = find_greedy_match_slide(show.slides[-1], slides)
+
+        if best_slide is None:
+            continue
+
+        show.add_slide(slides.pop(best_slide))
+
+        pbar.set_postfix(score=show.score, n_slides=len(show.slides))
+
+    return show
+
+
+def optimal_subset_slideshow(photos):
     slides = get_horizontal_slides(photos) + get_vertical_slides(photos)
-
-    print(get_vertical_slides(photos))
-
     slideshows = optimal_subsets(slides, 6)
+    return  merge_slideshows(slideshows)
+
+if __name__ == "__main__":
+
+    input_file = sys.argv[1]
+    photos = parse_input(input_file)
 
     # Calculate reference slideshow score
-    ref_slideshow = slideshow(slides)
-    print("Reference (random) slideshow score: ", ref_slideshow.score)
+    #ref_slideshow = Slideshow(slides)
+    #print("Reference (random) slideshow score: ", ref_slideshow.score)
 
-    combined = merge_slideshows(slideshows)
+    show = greedy_slideshow(photos)
 
-    print("Combined score: ", combined.score)
+    print("Slideshow score: ", show.score)
 
-    combined.save("output.txt")
+    show.save("test_greedy_{}.txt".format(input_file.split('.')[0]))

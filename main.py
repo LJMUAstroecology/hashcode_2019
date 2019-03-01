@@ -188,7 +188,7 @@ if __name__ == "__main__":
     #ref_slideshow = Slideshow(slides)
     #print("Reference (random) slideshow score: ", ref_slideshow.score)
 
-    show = greedy_slideshow(photos, rand_seed=time.time(), strategy="naive")
+    show = greedy_slideshow(photos, rand_seed=time.time(), strategy=argv[2])
 
     print("Slideshow score: ", show.score)
 

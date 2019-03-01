@@ -91,7 +91,7 @@ def find_greedy_match_slide(slide, slides):
         return 0
 
     best_score = 0
-    best_match = None
+    best_match = random.randint(0, len(slides)-1)
 
     for i, s in enumerate(slides):
         score = slide.score(s)
@@ -113,16 +113,16 @@ def find_greedy_match_vertical(photo, photos):
         return photos[0]
 
     best_score = 0
-    best_match = None
+    best_match = random.randint(0, len(photos)-1)
 
-    for p in photos:
+    for i,p in enumerate(photos):
         score = len(photo.tags.difference(p))
 
         if score > best_score:
             best_score = score
-            best_match = p
-    
-    return best_match
+            best_match = i
+
+    return i
 
 def get_horizontal_slides(photos):
     return [Slide([p]) for p in photos if p.orientation == "H"]
@@ -136,15 +136,19 @@ def get_vertical_slides(photos, strategy="naive"):
         for i, _ in enumerate(verticals[::2]):
             slides.append(Slide( [verticals[i], verticals[i+1]] ))
     elif strategy == "greedy":
-        pass
+
+        for i, _ in enumerate(verticals):
+            v = verticals.pop()
+            best_match = find_greedy_match_vertical(v, verticals)
+            slides.append([v, verticals.pop(best_match)])
 
     return slides
 
-def get_slides_naive(photos):
+def get_slides(photos, strategy="naive"):
     return get_horizontal_slides(photos) + get_vertical_slides(photos)
 
-def greedy_slideshow(photos, rand_seed=42):
-    slides = get_slides_naive(photos)
+def greedy_slideshow(photos, rand_seed=42, strategy="naive"):
+    slides = get_slides(photos)
 
     random.seed(rand_seed)
     random.shuffle(slides)
@@ -156,17 +160,13 @@ def greedy_slideshow(photos, rand_seed=42):
     n_slides = len(slides)
     pbar = tqdm(total=n_slides)
 
-    # This runs for 2N/2 iterations. The greedy slide-finder takes N
+    # This runs for N^2 iterations...
 
     pbar = tqdm(range(n_slides))
     for _ in pbar:
         best_slide = find_greedy_match_slide(show.slides[-1], slides)
+        show.add_slide(slides.pop(best_slide))
 
-        if best_slide is None:
-            idx = random.randint(0, len(slides)-1)
-            show.add_slide(slides.pop(idx))
-        else:
-            show.add_slide(slides.pop(best_slide))
         pbar.set_postfix(score=show.score, n_slides=len(show.slides))
 
     return show
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     #ref_slideshow = Slideshow(slides)
     #print("Reference (random) slideshow score: ", ref_slideshow.score)
 
-    show = greedy_slideshow(photos, rand_seed=time.time())
+    show = greedy_slideshow(photos, rand_seed=time.time(), strategy="greedy")
 
     print("Slideshow score: ", show.score)
 

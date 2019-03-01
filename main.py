@@ -189,11 +189,9 @@ def greedy_slideshow(photos, rand_seed=42):
         best_photo = photos.pop(best_idx)
         show.add_slide(Slide([best_photo]))
 
-        if best_photo.orientation == "H":
+        if best_photo.orientation == "V":
             # If we have a horizontal photo, then we're done
-            continue
-        else:
-            # Find the best vertical photo
+            # otherwise find the best vertical photo
             best_idx = find_greedy_match_photo(show.slides[-1], [p for p in photos if p.orientation == "V"])
             best_photo = photos.pop(best_idx)
             show.slides[-1].photos.append(best_photo)

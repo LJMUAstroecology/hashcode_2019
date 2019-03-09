@@ -237,7 +237,7 @@ if __name__ == "__main__":
     #slides = get_vertical_slides_simple(photos) + get_horizontal_slides(photos)
     #show = greedy_slideshow_slides(slides)
 
-    # Abit slower, scores 1.2M
+    # A bit slower, scores 1.185M
     show = greedy_slideshow(photos)
 
     print("Slideshow score: ", show.score)

@@ -52,34 +52,6 @@ def parse_input(input_filename):
 
     return photos
 
-def find_greedy_match_slide(slide, slides):
-    """
-    Simple strategy for finding the best match for a given (horizontal!) photo.
-
-    Complexity is O(N) where N = len(photos)
-
-    Returns the *index* of the best match
-    """
-
-    if len(slides) == 1:
-        return 0
-
-    best_possible = len(slide.tags)
-    best_score = 0
-    best_match = random.randint(0, len(slides)-1)
-
-    for i, s in enumerate(slides):
-        score = slide.score(s)
-        
-        if score > best_score:
-            best_score = score
-            best_match = i
-
-            if score == best_possible:
-                break
-    
-    return best_match
-
 def find_greedy_match_photo(slide, photos):
     """
     Find the best photo
@@ -130,47 +102,6 @@ def find_greedy_match_vertical_photo(slide, photo, photos):
         
     return best_match, best_score
 
-def get_horizontal_slides(photos):
-    return [Slide(p) for p in photos if p.orientation == "H"]
-
-def get_vertical_slides(photos, rand_seed=time.time()):
-
-    random.seed(rand_seed)
-    random.shuffle(photos)
-
-    slides = []
-    verticals = [p for p in photos if p.orientation == "V"]
-
-    while len(verticals) > 0:
-        slides.append(Slide(verticals.pop(), verticals.pop()))
-            
-    return slides
-
-def get_slides(photos):
-    return get_horizontal_slides(photos) + get_vertical_slides(photos)
-
-def greedy_slideshow_slides(slides, rand_seed=time.time()):
-    random.seed(rand_seed)
-    random.shuffle(photos)
-
-    show = Slideshow([slides.pop()])
-    total_slides = len(slides)
-
-    # This runs for N^2 iterations...
-    pbar = tqdm(range(total_slides))
-    for _, _ in enumerate(pbar):
-
-        if len(slides) == 0:
-            break
-
-        best_idx = find_greedy_match_slide(show.slides[-1], slides)
-        show.add_slide(slides.pop(best_idx))
-
-        avg_score = show.score/len(show.slides)
-        pbar.set_postfix(score=show.score, avg_score=avg_score)
-    
-    return show
-
 def greedy_slideshow(photos, rand_seed=time.time()):
 
     random.seed(rand_seed)
@@ -180,12 +111,7 @@ def greedy_slideshow(photos, rand_seed=time.time()):
     vertical_photos = [p for p in photos if p.orientation == "V"]
     horizontal_photos = [p for p in photos if p.orientation == "H"]
 
-    n_h = len(horizontal_photos)
-    n_v = len(vertical_photos)
-
-    print(n_h, n_v)
-
-    if n_h == 0:
+    if len(horizontal_photos) == 0:
         show = Slideshow([ Slide(vertical_photos.pop(), vertical_photos.pop()) ])
     else:
         show = Slideshow([ Slide(horizontal_photos.pop()) ])
@@ -195,11 +121,6 @@ def greedy_slideshow(photos, rand_seed=time.time()):
     # This runs for N^2 iterations...
     pbar = tqdm(range(n_slides))
     for i, _ in enumerate(pbar):
-
-        total_photos = len(horizontal_photos)+len(vertical_photos)
-
-        if total_photos == 0:
-            break
 
         best_idx_h, score_h = find_greedy_match_photo(show.slides[-1], horizontal_photos)
         best_idx_v, score_v = find_greedy_match_photo(show.slides[-1], vertical_photos)
